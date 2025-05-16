@@ -236,9 +236,13 @@ pub fn make_libp2p_driver(
                 debug!("libp2p driver initialization complete signal sent");
             }
 
+
+            info!("libp2p driver started");
             loop {
                 tokio::select! {
                     Ok(noun_slab) = handle.next_effect() => {
+                        info!("next_effect!!!!!");
+
                         let _span = tracing::trace_span!("broadcast").entered();
                         let swarm_tx_clone = swarm_tx.clone();
                         let equix_builder_clone = equix_builder.clone();
@@ -327,6 +331,8 @@ pub fn make_libp2p_driver(
                         }
                     },
                     _ = kad_bootstrap.tick() => {
+                        info!("kad_bootstrap.tick()");
+
                         // If we don't have any peers, we should retry dialing our initial peers
                         if let Err(NoKnownPeers())= swarm.behaviour_mut().kad.bootstrap() {
                             if initial_peer_retries_remaining > 0 {
@@ -378,6 +384,7 @@ impl NockchainRequest {
         remote_peer_id: &libp2p::PeerId,
         message: &NounSlab,
     ) -> NockchainRequest {
+        info!("new_request!!!");
         let message_bytes = ByteBuf::from(message.jam().as_ref());
         let local_peer_bytes = (*local_peer_id).to_bytes();
         let remote_peer_bytes = (*remote_peer_id).to_bytes();
@@ -406,11 +413,14 @@ impl NockchainRequest {
             nonce += 1;
         };
 
-        NockchainRequest::Request {
+        let request = NockchainRequest::Request {
             pow: sol_bytes,
             nonce,
             message: message_bytes,
-        }
+        };
+        info!("new_request request: {request:?}");
+        request
+
     }
 
     /// Verify the EquiX PoW attached to a request
@@ -420,6 +430,7 @@ impl NockchainRequest {
         local_peer_id: &libp2p::PeerId,
         remote_peer_id: &libp2p::PeerId,
     ) -> Result<(), equix::Error> {
+        info!("verify_pow!!!");
         match self {
             NockchainRequest::Request {
                 pow,
